@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "Contraventions Usager",
+    "slug": "contraventions-usager",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F3F5FA",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "ne.police.contraventions.usager",
+      "adaptiveIcon": {
+        "backgroundColor": "#3A5CF0",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "6be6cfe5-47d7-4c3f-b155-e9bbf2cf2d44"
+      }
+    }
+  }
+}

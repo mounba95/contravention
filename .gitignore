@@ -1,0 +1,8 @@
+.env
+*.log
+
+# Généré par `frontend/` (npm run build) — voir README
+backend/public/
+
+# Archive volumineuse hors dépôt (export ponctuel, non nécessaire au code)
+systeme-contraventions-niger.zip

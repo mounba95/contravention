@@ -1,0 +1,59 @@
+{
+  "expo": {
+    "name": "Contraventions Agent",
+    "slug": "contraventions-agent",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#EFEAE0",
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "L'application utilise l'appareil photo pour joindre une preuve visuelle à une contravention.",
+        "NSLocationWhenInUseDescription": "L'application peut utiliser votre position pour localiser une contravention."
+      }
+    },
+    "android": {
+      "package": "ne.police.contraventions.agent",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "adaptiveIcon": {
+        "backgroundColor": "#1C2B33",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "L'application utilise l'appareil photo pour joindre une preuve visuelle à une contravention."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "2160c111-69e1-4bd7-970a-131c5976ce50"
+      }
+    }
+  }
+}
