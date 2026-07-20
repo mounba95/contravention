@@ -100,8 +100,19 @@ const liensPaiement = {
     );
     return rows[0] || null;
   },
+  /**
+   * Marque le lien comme utilisé après un paiement réussi ET prolonge sa
+   * validité (2 ans) au lieu de le laisser expirer à l'échéance d'origine :
+   * l'usager doit pouvoir rouvrir le lien reçu par SMS pour retrouver son
+   * reçu de paiement bien après la date d'échéance. Aucune action nouvelle
+   * n'est permise pour autant — c'est le statut PAYEE de la contravention
+   * qui empêche un second paiement ou une contestation, pas ce flag.
+   */
   async marquerUtilise(id) {
-    await pool.query("UPDATE liens_paiement SET utilise = true WHERE id = $1", [id]);
+    await pool.query(
+      "UPDATE liens_paiement SET utilise = true, expire_le = NOW() + INTERVAL '2 years' WHERE id = $1",
+      [id]
+    );
   }
 };
 

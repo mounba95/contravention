@@ -89,9 +89,10 @@ router.post("/:token", async (req, res) => {
       return res.status(resultat.status).json({ error: resultat.error });
     }
 
-    // Le lien a rempli son office : on le neutralise (le statut PAYEE de la
-    // contravention empêche déjà un second paiement, ceci est une garantie
-    // supplémentaire).
+    // Prolonge la validité du lien (voir db/store.js) : l'usager doit pouvoir
+    // rouvrir le lien reçu par SMS pour retrouver son reçu, même après la
+    // date d'échéance d'origine. Le statut PAYEE de la contravention empêche
+    // déjà tout nouveau paiement ou contestation via ce même lien.
     await db.liensPaiement.marquerUtilise(lien.id);
 
     res.status(201).json({ ...resultat.paiement, recu: resultat.recu });
