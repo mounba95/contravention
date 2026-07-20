@@ -11,4 +11,4 @@
  *
  * Le téléphone et l'ordinateur doivent être sur le même réseau Wi-Fi.
  */
-export const API_BASE_URL = "http://10.221.217.5:3001";
+export const API_BASE_URL = "http://192.168.0.54:3001";
