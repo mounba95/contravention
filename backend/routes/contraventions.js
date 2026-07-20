@@ -8,6 +8,7 @@ const db = require("../db/store");
 const rnpClient = require("../services/rnpClient");
 const registreVehiculesClient = require("../services/registreVehiculesClient");
 const smsClient = require("../services/smsClient");
+const paiementService = require("../services/paiementService");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { logAction } = require("../middleware/audit");
 const { isValidNiu, isValidPlaque, cleanText } = require("../middleware/validators");
@@ -52,7 +53,9 @@ async function creerEtEnvoyerLienPaiement(contravention, telephone) {
   const lien = `${base}/payer.html?t=${token}`;
   await smsClient.envoyerLienPaiement(telephone, lien, {
     numero: contravention.numero_unique,
-    montant: contravention.montant
+    montant: contravention.montant,
+    dateEcheance: contravention.date_echeance,
+    tauxMajoration: await paiementService.tauxMajorationRetard()
   });
   return lien;
 }
@@ -64,10 +67,15 @@ function statutReel(c) {
   return "NON_PAYEE";
 }
 
-function withStatutReel(c) {
+function withStatutReel(c, tauxMajoration) {
   // On n'expose jamais le chemin disque brut ni le contenu — seulement un indicateur.
   const { photo_path, ...rest } = c;
-  return { ...rest, statut: statutReel(c), a_une_photo: !!photo_path };
+  return {
+    ...rest,
+    statut: statutReel(c),
+    montant_du: paiementService.calculerMontantDu(c, tauxMajoration),
+    a_une_photo: !!photo_path
+  };
 }
 
 // Types d'infraction (référentiel) — ?actifs=true pour ne récupérer que les types actifs
@@ -230,7 +238,7 @@ router.post("/", authenticate, requireRole("agent"), async (req, res) => {
       console.error("Échec de l'envoi du lien de paiement par SMS :", e.message);
     }
 
-    const reponse = withStatutReel({ ...contravention, infractions });
+    const reponse = withStatutReel({ ...contravention, infractions }, await paiementService.tauxMajorationRetard());
     // Hors production uniquement : permet de tester le paiement sans vrai SMS.
     if (lienPaiement && process.env.NODE_ENV !== "production") {
       reponse.lien_paiement_demo = lienPaiement;
@@ -252,7 +260,8 @@ router.get("/", authenticate, async (req, res) => {
       dateDebut: date_debut, dateFin: date_fin,
       page, limit
     });
-    res.json({ ...result, rows: result.rows.map(withStatutReel) });
+    const taux = await paiementService.tauxMajorationRetard();
+    res.json({ ...result, rows: result.rows.map(c => withStatutReel(c, taux)) });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "Erreur serveur lors de la recherche." });
@@ -265,14 +274,15 @@ router.get("/usager/:niu", authenticate, requireRole("admin", "agent"), async (r
     return res.status(400).json({ error: "Format de NIU invalide." });
   }
   const list = await db.contraventions.byUsager(req.params.niu);
-  res.json(list.map(withStatutReel));
+  const taux = await paiementService.tauxMajorationRetard();
+  res.json(list.map(c => withStatutReel(c, taux)));
 });
 
 // Détail d'une contravention par numéro unique
 router.get("/numero/:numero", async (req, res) => {
   const c = await db.contraventions.byNumero(req.params.numero);
   if (!c) return res.status(404).json({ error: "Contravention introuvable." });
-  res.json(withStatutReel(c));
+  res.json(withStatutReel(c, await paiementService.tauxMajorationRetard()));
 });
 
 // QR code (PNG en data URL) encodant le numéro de contravention
@@ -304,7 +314,7 @@ router.get("/numero/:numero/photo", authenticate, async (req, res) => {
 router.get("/:id", authenticate, async (req, res) => {
   const c = await db.contraventions.byId(req.params.id);
   if (!c) return res.status(404).json({ error: "Contravention introuvable." });
-  res.json(withStatutReel(c));
+  res.json(withStatutReel(c, await paiementService.tauxMajorationRetard()));
 });
 
 module.exports = router;

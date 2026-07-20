@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from "chart.js";
 import { Doughnut, Bar } from "react-chartjs-2";
 import { api } from "../../shared/api";
@@ -50,10 +50,24 @@ function BarOrEmpty({ dataObj }) {
 
 export default function DashboardTab() {
   const [stats, setStats] = useState(null);
+  const [agents, setAgents] = useState([]);
+  const [filtres, setFiltres] = useState({ dateDebut: "", dateFin: "", agentId: "" });
+
+  const charger = useCallback(async (f = filtres) => {
+    const params = new URLSearchParams();
+    if (f.dateDebut) params.set("date_debut", f.dateDebut);
+    if (f.dateFin) params.set("date_fin", f.dateFin + "T23:59:59");
+    if (f.agentId) params.set("agent_id", f.agentId);
+    const data = await api(`/api/dashboard/stats?${params.toString()}`, "GET");
+    setStats(data);
+  }, [filtres]);
 
   useEffect(() => {
-    api("/api/dashboard/stats", "GET").then(setStats);
-  }, []);
+    charger({ dateDebut: "", dateFin: "", agentId: "" });
+    api("/api/users", "GET").then(list => setAgents(list.filter(u => u.role === "agent")));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const filtresActifs = filtres.dateDebut || filtres.dateFin || filtres.agentId;
 
   if (!stats) return <div className="empty-state">Chargement…</div>;
 
@@ -63,9 +77,39 @@ export default function DashboardTab() {
 
   return (
     <>
+      <div className="chart-card" style={{ marginBottom: 22 }}>
+        <h2>🔎 Filtrer les statistiques</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+          <div>
+            <label>Du</label>
+            <input type="date" value={filtres.dateDebut} onChange={e => setFiltres({ ...filtres, dateDebut: e.target.value })} />
+          </div>
+          <div>
+            <label>Au</label>
+            <input type="date" value={filtres.dateFin} onChange={e => setFiltres({ ...filtres, dateFin: e.target.value })} />
+          </div>
+          <div>
+            <label>Agent</label>
+            <select value={filtres.agentId} onChange={e => setFiltres({ ...filtres, agentId: e.target.value })}>
+              <option value="">Tous les agents</option>
+              {agents.map(a => <option key={a.id} value={a.id}>{a.nom}</option>)}
+            </select>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+          <button className="primary" style={{ marginTop: 0 }} onClick={() => charger(filtres)}>Appliquer</button>
+          <button
+            className="secondary"
+            onClick={() => { const vide = { dateDebut: "", dateFin: "", agentId: "" }; setFiltres(vide); charger(vide); }}
+          >
+            Réinitialiser
+          </button>
+        </div>
+      </div>
+
       <div className="grid-stats">
-        <div className="stat-box" style={{ "--accent": "#3A5CF0" }}><div className="label">Total contraventions</div><div className="value">{stats.total_contraventions}</div></div>
-        <div className="stat-box" style={{ "--accent": "#12B886" }}><div className="label">Montant collecté</div><div className="value">{stats.montant_collecte.toLocaleString("fr-FR")}</div></div>
+        <div className="stat-box" style={{ "--accent": "#3A5CF0" }}><div className="label">Total contraventions{filtresActifs ? " (filtré)" : ""}</div><div className="value">{stats.total_contraventions}</div></div>
+        <div className="stat-box" style={{ "--accent": "#12B886" }}><div className="label">Recette{filtresActifs ? " (filtrée)" : " collectée"}</div><div className="value">{stats.montant_collecte.toLocaleString("fr-FR")}</div></div>
         <div className="stat-box" style={{ "--accent": "#8B5CF6" }}><div className="label">Taux de paiement</div><div className="value">{stats.taux_paiement}%</div></div>
         <div className="stat-box" style={{ "--accent": "#F5A524" }}><div className="label">Agents actifs</div><div className="value">{stats.agents_actifs}</div></div>
         <div className="stat-box" style={{ "--accent": "#F0453A" }}><div className="label">En retard</div><div className="value">{stats.par_statut.EN_RETARD || 0}</div></div>

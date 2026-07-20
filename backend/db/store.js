@@ -105,6 +105,25 @@ const liensPaiement = {
   }
 };
 
+// Réglages système modifiables depuis l'Administration (clé/valeur générique).
+const parametres = {
+  async get(cle) {
+    const { rows } = await pool.query("SELECT valeur FROM parametres WHERE cle = $1", [cle]);
+    return rows[0] ? rows[0].valeur : null;
+  },
+  async all() {
+    const { rows } = await pool.query("SELECT * FROM parametres ORDER BY cle");
+    return rows;
+  },
+  async set(cle, valeur) {
+    await pool.query(
+      `INSERT INTO parametres (cle, valeur) VALUES ($1,$2)
+       ON CONFLICT (cle) DO UPDATE SET valeur = EXCLUDED.valeur`,
+      [cle, valeur]
+    );
+  }
+};
+
 const typesInfraction = {
   async all() {
     const { rows } = await pool.query("SELECT * FROM types_infraction ORDER BY libelle");
@@ -272,6 +291,71 @@ const contraventions = {
   }
 };
 
+/**
+ * Statistiques du tableau de bord, filtrables par période et par agent.
+ * Les mêmes conditions (sur `c`, alias de `contraventions`) sont réutilisées
+ * pour les contraventions, leurs infractions et les paiements associés, afin
+ * que la recette affichée corresponde exactement au périmètre filtré.
+ */
+const dashboardStats = {
+  async get({ dateDebut, dateFin, agentId } = {}) {
+    const conditions = [];
+    const params = [];
+    let i = 1;
+    if (agentId) { conditions.push(`c.agent_id = $${i++}`); params.push(agentId); }
+    if (dateDebut) { conditions.push(`c.date_heure >= $${i++}`); params.push(dateDebut); }
+    if (dateFin) { conditions.push(`c.date_heure <= $${i++}`); params.push(dateFin); }
+    const whereC = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+
+    const { rows: totalRows } = await pool.query(
+      `SELECT
+         COUNT(*)::int AS total,
+         COUNT(*) FILTER (WHERE c.statut = 'PAYEE')::int AS payees,
+         COUNT(*) FILTER (WHERE c.statut = 'CONTESTEE')::int AS contestees,
+         COUNT(*) FILTER (WHERE c.statut = 'ANNULEE')::int AS annulees,
+         COUNT(*) FILTER (WHERE c.statut = 'NON_PAYEE' AND c.date_echeance >= NOW())::int AS non_payees,
+         COUNT(*) FILTER (WHERE c.statut = 'NON_PAYEE' AND c.date_echeance < NOW())::int AS en_retard
+       FROM contraventions c ${whereC}`,
+      params
+    );
+
+    const { rows: zoneRows } = await pool.query(
+      `SELECT c.lieu, COUNT(*)::int AS n FROM contraventions c ${whereC} GROUP BY c.lieu ORDER BY n DESC`,
+      params
+    );
+
+    const { rows: agentRows } = await pool.query(
+      `SELECT c.agent_nom, COUNT(*)::int AS n FROM contraventions c ${whereC} GROUP BY c.agent_nom ORDER BY n DESC`,
+      params
+    );
+
+    const { rows: infractionRows } = await pool.query(
+      `SELECT ci.type_infraction_libelle AS libelle, COUNT(*)::int AS n
+       FROM contravention_infractions ci
+       JOIN contraventions c ON c.id = ci.contravention_id
+       ${whereC}
+       GROUP BY ci.type_infraction_libelle ORDER BY n DESC`,
+      params
+    );
+
+    const { rows: montantRows } = await pool.query(
+      `SELECT COALESCE(SUM(p.montant),0)::int AS total
+       FROM paiements p
+       JOIN contraventions c ON c.id = p.contravention_id
+       ${whereC}`,
+      params
+    );
+
+    return {
+      total: totalRows[0],
+      parZone: zoneRows,
+      parAgent: agentRows,
+      parInfraction: infractionRows,
+      montantCollecte: montantRows[0].total
+    };
+  }
+};
+
 const paiements = {
   async insert(p) {
     await pool.query(
@@ -350,4 +434,4 @@ const auditLog = {
   }
 };
 
-module.exports = { users, citoyens, vehicules, liensPaiement, typesInfraction, contraventions, paiements, contestations, auditLog, pool };
+module.exports = { users, citoyens, vehicules, liensPaiement, parametres, typesInfraction, contraventions, dashboardStats, paiements, contestations, auditLog, pool };

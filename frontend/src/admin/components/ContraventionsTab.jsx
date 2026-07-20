@@ -91,7 +91,14 @@ export default function ContraventionsTab() {
                   <td>{c.agent_nom}</td>
                   <td>{c.type_infraction_libelle}</td>
                   <td>{c.lieu}</td>
-                  <td>{c.montant.toLocaleString("fr-FR")} FCFA</td>
+                  <td>
+                    {c.montant_du.toLocaleString("fr-FR")} FCFA
+                    {c.montant_du > c.montant && (
+                      <div style={{ fontSize: 11, color: "var(--danger)", fontWeight: 600 }}>
+                        (initial {c.montant.toLocaleString("fr-FR")} + retard)
+                      </div>
+                    )}
+                  </td>
                   <td><StatusPill statut={c.statut} /></td>
                   <td>{new Date(c.date_heure).toLocaleDateString("fr-FR")}</td>
                   <td>{c.a_une_photo ? <a href="#" onClick={e => { e.preventDefault(); voirPhoto(c.numero_unique); }}>Voir</a> : "—"}</td>

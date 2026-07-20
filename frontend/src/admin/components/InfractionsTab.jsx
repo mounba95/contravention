@@ -12,12 +12,41 @@ export default function InfractionsTab() {
   const [message, setMessage] = useState(null);
   const [chargement, setChargement] = useState(false);
 
+  const [tauxMajoration, setTauxMajoration] = useState("");
+  const [messageTaux, setMessageTaux] = useState(null);
+  const [chargementTaux, setChargementTaux] = useState(false);
+
   const charger = useCallback(async () => {
     const data = await api("/api/contraventions/types-infraction", "GET");
     setListe(data);
   }, []);
 
-  useEffect(() => { charger(); }, [charger]);
+  const chargerParametres = useCallback(async () => {
+    const params = await api("/api/parametres", "GET");
+    const taux = params.find(p => p.cle === "taux_majoration_retard");
+    setTauxMajoration(taux ? taux.valeur : "5");
+  }, []);
+
+  useEffect(() => { charger(); chargerParametres(); }, [charger, chargerParametres]);
+
+  async function enregistrerTaux(e) {
+    e.preventDefault();
+    setMessageTaux(null);
+    const n = Number(tauxMajoration);
+    if (!Number.isFinite(n) || n < 0 || n > 100) {
+      setMessageTaux({ texte: "Le taux doit être un nombre entre 0 et 100.", ok: false });
+      return;
+    }
+    setChargementTaux(true);
+    try {
+      await api("/api/parametres/taux_majoration_retard", "PUT", { valeur: n });
+      setMessageTaux({ texte: "Taux de majoration mis à jour.", ok: true });
+    } catch (err) {
+      setMessageTaux({ texte: err.message, ok: false });
+    } finally {
+      setChargementTaux(false);
+    }
+  }
 
   function reinitialiser() {
     setLibelle(""); setMontant(""); setEditionId(null); setFormulaireOuvert(false);
@@ -65,7 +94,25 @@ export default function InfractionsTab() {
   }
 
   return (
-    <Card title="🚦 Types d'infraction">
+    <>
+      <Card title="⏰ Majoration de retard">
+        <p style={{ fontSize: 13.5, color: "var(--ink-soft)", marginTop: 0 }}>
+          Si une contravention n'est pas payée avant son échéance (15 jours), le montant à payer
+          augmente automatiquement une seule fois de ce pourcentage.
+        </p>
+        <form onSubmit={enregistrerTaux} style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
+          <div>
+            <label>Taux de majoration (%)</label>
+            <input type="number" min="0" max="100" step="0.1" value={tauxMajoration} onChange={e => setTauxMajoration(e.target.value)} style={{ width: 120 }} />
+          </div>
+          <button className="primary" style={{ marginTop: 0 }} disabled={chargementTaux}>
+            {chargementTaux ? "Enregistrement…" : "Enregistrer"}
+          </button>
+        </form>
+        <Message texte={messageTaux?.texte} ok={messageTaux?.ok} />
+      </Card>
+
+      <Card title="🚦 Types d'infraction">
       <button className="primary" style={{ marginTop: 0, marginBottom: 18 }} onClick={() => { formulaireOuvert ? reinitialiser() : setFormulaireOuvert(true); }}>
         {formulaireOuvert ? "Annuler" : "+ Ajouter un type d'infraction"}
       </button>
@@ -106,6 +153,7 @@ export default function InfractionsTab() {
           </tbody>
         </table>
       )}
-    </Card>
+      </Card>
+    </>
   );
 }

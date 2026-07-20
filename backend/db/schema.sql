@@ -57,6 +57,13 @@ CREATE TABLE IF NOT EXISTS vehicules (
 );
 CREATE INDEX IF NOT EXISTS idx_vehicules_niu ON vehicules(niu);
 
+-- Réglages système modifiables depuis l'Administration (ex: taux de
+-- majoration de retard) sans toucher au code — voir migration 010.
+CREATE TABLE IF NOT EXISTS parametres (
+  cle TEXT PRIMARY KEY,
+  valeur TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS types_infraction (
   id UUID PRIMARY KEY,
   libelle TEXT NOT NULL,

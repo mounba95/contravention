@@ -22,6 +22,7 @@ export default function EmettreTab({ onCreated }) {
   const [vehiculeVerifie, setVehiculeVerifie] = useState(null);
   const [messageVerif, setMessageVerif] = useState(null);
   const [chargementVerif, setChargementVerif] = useState(false);
+  const [impayes, setImpayes] = useState([]);
 
   const [typesSelectionnes, setTypesSelectionnes] = useState([]);
   const [lieu, setLieu] = useState("");
@@ -76,6 +77,7 @@ export default function EmettreTab({ onCreated }) {
   async function verifierPlaque() {
     setMessageVerif(null);
     setVehiculeVerifie(null);
+    setImpayes([]);
     if (!plaqueValide(plaque)) {
       setMessageVerif({ texte: "Format de plaque invalide.", ok: false });
       return;
@@ -87,6 +89,17 @@ export default function EmettreTab({ onCreated }) {
       const veh = [data.marque, data.modele, data.couleur].filter(Boolean).join(" ");
       const prop = data.proprietaire ? ` — Propriétaire : ${data.proprietaire.prenom} ${data.proprietaire.nom}` : "";
       setMessageVerif({ texte: `✓ Véhicule identifié — ${veh}${prop}`, ok: true });
+
+      // Historique des impayés de ce propriétaire — utile pour l'agent avant
+      // de dresser une nouvelle contravention (récidive, contestations en cours…).
+      if (data.niu) {
+        try {
+          const historique = await api(`/api/contraventions/usager/${encodeURIComponent(data.niu)}`, "GET");
+          setImpayes(historique.filter(c => c.statut === "NON_PAYEE" || c.statut === "EN_RETARD"));
+        } catch {
+          // Pas bloquant : simple indication de confort pour l'agent.
+        }
+      }
     } catch (e) {
       if (!navigator.onLine || e instanceof TypeError) {
         // Hors ligne : on autorise la saisie, la plaque sera résolue à la synchronisation.
@@ -134,6 +147,7 @@ export default function EmettreTab({ onCreated }) {
     setPlaque("");
     setVehiculeVerifie(null);
     setMessageVerif(null);
+    setImpayes([]);
     setTypesSelectionnes([]);
     setLieu("");
     setNotes("");
@@ -209,6 +223,23 @@ export default function EmettreTab({ onCreated }) {
           {chargementVerif ? "Vérification…" : "Vérifier au registre des véhicules"}
         </button>
         <Message texte={messageVerif?.texte} ok={messageVerif?.ok} />
+
+        {impayes.length > 0 && (
+          <div style={{ marginTop: 14, padding: 14, borderRadius: 12, background: "var(--danger-soft)" }}>
+            <div style={{ fontWeight: 700, color: "var(--danger)", fontSize: 13.5 }}>
+              ⚠ {impayes.length} contravention{impayes.length > 1 ? "s" : ""} impayée{impayes.length > 1 ? "s" : ""} pour ce propriétaire
+              — total {impayes.reduce((s, c) => s + c.montant_du, 0).toLocaleString("fr-FR")} FCFA
+            </div>
+            <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+              {impayes.map(c => (
+                <div key={c.id} style={{ fontSize: 12.5, color: "var(--ink-soft)" }}>
+                  {c.numero_unique} — {c.type_infraction_libelle} — {c.montant_du.toLocaleString("fr-FR")} FCFA
+                  {c.statut === "EN_RETARD" && <strong style={{ color: "var(--danger)" }}> (en retard)</strong>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </Card>
 
       {vehiculeVerifie && (

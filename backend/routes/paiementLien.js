@@ -53,6 +53,8 @@ router.get("/:token", async (req, res) => {
       type_infraction_libelle: c.type_infraction_libelle,
       infractions: c.infractions,
       montant: c.montant,
+      montant_du: await paiementService.montantDu(c),
+      taux_majoration_retard: await paiementService.tauxMajorationRetard(),
       lieu: c.lieu,
       date_heure: c.date_heure,
       date_echeance: c.date_echeance,

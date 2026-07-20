@@ -140,7 +140,19 @@ export default function App() {
                   <div className="row"><span className="k">Lieu</span><span>{contravention.lieu}</span></div>
                   <div className="row"><span className="k">Date</span><span>{new Date(contravention.date_heure).toLocaleString("fr-FR")}</span></div>
                   <div className="row"><span className="k">Échéance</span><span>{new Date(contravention.date_echeance).toLocaleDateString("fr-FR")}</span></div>
-                  <div className="montant">Total : {contravention.montant.toLocaleString("fr-FR")} FCFA</div>
+                  {contravention.montant_du > contravention.montant && (
+                    <div className="row"><span className="k">Montant initial</span><span>{contravention.montant.toLocaleString("fr-FR")} FCFA</span></div>
+                  )}
+                  <div className="montant">Total : {contravention.montant_du.toLocaleString("fr-FR")} FCFA</div>
+                  {contravention.montant_du > contravention.montant ? (
+                    <p style={{ fontSize: 13, fontWeight: 700, color: "var(--danger)", background: "var(--danger-soft)", padding: "8px 12px", borderRadius: 10, marginTop: 10 }}>
+                      ⚠ Échéance dépassée — majoration de retard appliquée.
+                    </p>
+                  ) : contravention.taux_majoration_retard > 0 && (contravention.statut === "NON_PAYEE") && (
+                    <p style={{ fontSize: 13, fontWeight: 700, color: "var(--warning)", background: "var(--warning-soft)", padding: "8px 12px", borderRadius: 10, marginTop: 10 }}>
+                      ⏰ Passé cette date, une majoration de {contravention.taux_majoration_retard}% sera appliquée automatiquement.
+                    </p>
+                  )}
                 </div>
                 <StatusPill statut={contravention.statut} />
               </div>
@@ -207,7 +219,7 @@ export default function App() {
                     )}
 
                     <button className="primary" onClick={payer} disabled={chargement}>
-                      {chargement ? "Traitement…" : `Payer ${contravention.montant.toLocaleString("fr-FR")} FCFA`}
+                      {chargement ? "Traitement…" : `Payer ${contravention.montant_du.toLocaleString("fr-FR")} FCFA`}
                     </button>
                     <Message texte={message?.texte} ok={message?.ok} />
                   </>

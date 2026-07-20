@@ -48,6 +48,11 @@ async function seed() {
     console.log("Véhicules (registre simulé) créés : " + vehiculesDemo.map(v => v.plaque).join(", "));
   }
 
+  if ((await db.parametres.get("taux_majoration_retard")) === null) {
+    await db.parametres.set("taux_majoration_retard", "5");
+    console.log("Paramètre créé : taux_majoration_retard = 5 %");
+  }
+
   if ((await db.typesInfraction.count()) === 0) {
     const types = [
       { id: uuid(), libelle: "Excès de vitesse", montant: 15000 },

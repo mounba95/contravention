@@ -18,6 +18,7 @@ const auditRoutes = require("./routes/audit");
 const exportRoutes = require("./routes/export");
 const usersRoutes = require("./routes/users");
 const paiementLienRoutes = require("./routes/paiementLien");
+const parametresRoutes = require("./routes/parametres");
 
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET === "changez-moi-en-production") {
   console.warn(
@@ -74,6 +75,7 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/audit", auditRoutes);
 app.use("/api/export", exportRoutes);
 app.use("/api/users", usersRoutes);
+app.use("/api/parametres", parametresRoutes);
 // Paiement par lien SMS (public, autorisé par le jeton dans l'URL — pas de
 // login). On ne met PAS de limiteur strict ici : les opérateurs mobiles
 // partagent une même IP entre de nombreux abonnés (CGNAT), un plafond serré

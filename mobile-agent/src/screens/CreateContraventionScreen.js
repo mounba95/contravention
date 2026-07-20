@@ -27,6 +27,7 @@ export default function CreateContraventionScreen({ enLigne, onCreated }) {
   const [vehiculeVerifie, setVehiculeVerifie] = useState(null);
   const [messageVerif, setMessageVerif] = useState(null); // { texte, ok }
   const [chargementVerif, setChargementVerif] = useState(false);
+  const [impayes, setImpayes] = useState([]);
   const [typesSelectionnes, setTypesSelectionnes] = useState([]);
   const [lieu, setLieu] = useState("");
   const [notes, setNotes] = useState("");
@@ -62,6 +63,7 @@ export default function CreateContraventionScreen({ enLigne, onCreated }) {
   async function verifierPlaque() {
     setMessageVerif(null);
     setVehiculeVerifie(null);
+    setImpayes([]);
     if (!plaqueValide(plaque)) {
       setMessageVerif({ texte: "Format de plaque invalide.", ok: false });
       return;
@@ -73,6 +75,17 @@ export default function CreateContraventionScreen({ enLigne, onCreated }) {
       const veh = [data.marque, data.modele, data.couleur].filter(Boolean).join(" ");
       const prop = data.proprietaire ? ` — ${data.proprietaire.prenom} ${data.proprietaire.nom}` : "";
       setMessageVerif({ texte: `✓ Véhicule identifié — ${veh}${prop}`, ok: true });
+
+      // Historique des impayés de ce propriétaire — utile avant de dresser
+      // une nouvelle contravention (récidive, contestations en cours…).
+      if (data.niu) {
+        try {
+          const historique = await api(`/api/contraventions/usager/${encodeURIComponent(data.niu)}`, "GET");
+          setImpayes(historique.filter(c => c.statut === "NON_PAYEE" || c.statut === "EN_RETARD"));
+        } catch {
+          // Pas bloquant : simple indication de confort pour l'agent.
+        }
+      }
     } catch (e) {
       if (!enLigne || e instanceof TypeError) {
         setVehiculeVerifie({ plaque: normaliserPlaque(plaque), proprietaire: null, horsLigne: true });
@@ -125,6 +138,7 @@ export default function CreateContraventionScreen({ enLigne, onCreated }) {
     setPlaque("");
     setVehiculeVerifie(null);
     setMessageVerif(null);
+    setImpayes([]);
     setTypesSelectionnes([]);
     setLieu("");
     setNotes("");
@@ -190,6 +204,19 @@ export default function CreateContraventionScreen({ enLigne, onCreated }) {
         </TouchableOpacity>
         {messageVerif && (
           <Text style={[styles.message, { color: messageVerif.ok ? colors.ledgerGreen : colors.stampRed }]}>{messageVerif.texte}</Text>
+        )}
+
+        {impayes.length > 0 && (
+          <View style={styles.alerteImpayes}>
+            <Text style={styles.alerteImpayesTitre}>
+              ⚠ {impayes.length} contravention{impayes.length > 1 ? "s" : ""} impayée{impayes.length > 1 ? "s" : ""} — total {impayes.reduce((s, c) => s + c.montant_du, 0).toLocaleString("fr-FR")} FCFA
+            </Text>
+            {impayes.map(c => (
+              <Text key={c.id} style={styles.alerteImpayesLigne}>
+                {c.numero_unique} — {c.type_infraction_libelle} — {c.montant_du.toLocaleString("fr-FR")} FCFA{c.statut === "EN_RETARD" ? " (en retard)" : ""}
+              </Text>
+            ))}
+          </View>
         )}
       </View>
 
@@ -296,6 +323,9 @@ const styles = StyleSheet.create({
     shadowColor: colors.primary, shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
   buttonPrimaryText: { color: "#fff", fontSize: 13.5, fontWeight: "700", letterSpacing: 0.3 },
   message: { marginTop: 12, fontSize: 13, fontWeight: "500" },
+  alerteImpayes: { marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: "#F0453A16" },
+  alerteImpayesTitre: { fontSize: 12.5, fontWeight: "700", color: colors.stampRed },
+  alerteImpayesLigne: { fontSize: 11.5, color: colors.inkSoft, marginTop: 4 },
   typeOption: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
     borderWidth: 1.5, borderColor: colors.border, borderRadius: 14, padding: 12, marginBottom: 8

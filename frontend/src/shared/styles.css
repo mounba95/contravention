@@ -244,6 +244,19 @@ button.secondary:hover { background: #3A5CF024; }
   color: var(--primary-ink);
 }
 
+/* Petits écrans (téléphone) : libellé au-dessus de la valeur au lieu de
+   les compresser sur la même ligne (ex: infraction + montant trop longs). */
+@media (max-width: 480px) {
+  .ticket .row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  .ticket .row span:last-child {
+    text-align: left;
+  }
+}
+
 /* ---------- Status pills ---------- */
 .stamp {
   display: inline-block;

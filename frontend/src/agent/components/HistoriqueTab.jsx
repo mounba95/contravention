@@ -30,7 +30,10 @@ export default function HistoriqueTab({ refreshKey }) {
                 <td>{c.citoyen_prenom} {c.citoyen_nom}</td>
                 <td>{c.plaque || "—"}</td>
                 <td>{c.type_infraction_libelle}</td>
-                <td>{c.montant.toLocaleString("fr-FR")} FCFA</td>
+                <td>
+                  {c.montant_du.toLocaleString("fr-FR")} FCFA
+                  {c.montant_du > c.montant && <span style={{ color: "var(--danger)", fontWeight: 600 }}> (retard)</span>}
+                </td>
                 <td><StatusPill statut={c.statut} /></td>
                 <td>{new Date(c.date_heure).toLocaleDateString("fr-FR")}</td>
               </tr>

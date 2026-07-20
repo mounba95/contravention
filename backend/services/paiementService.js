@@ -1,11 +1,9 @@
 /**
- * Logique de paiement d'une contravention, commune aux deux voies d'accès :
- *   - usager connecté (routes/paiements.js)
- *   - lien de paiement reçu par SMS, sans compte (routes/paiementLien.js)
+ * Logique de paiement d'une contravention. Le paiement se fait exclusivement
+ * via le lien reçu par SMS, sans compte (routes/paiementLien.js).
  *
  * Ne fait aucune vérification d'autorisation : l'appelant a déjà établi que
- * l'acteur a le droit de payer CETTE contravention (token de lien valide, ou
- * contravention appartenant à l'usager connecté).
+ * l'acteur a le droit de payer CETTE contravention (token de lien valide).
  */
 const { v4: uuid } = require("uuid");
 const db = require("../db/store");
@@ -15,9 +13,38 @@ const { isValidTelephone } = require("../middleware/validators");
 
 const FOURNISSEURS_VALIDES = ["MYNITA", "AMANATA", "WALLET", "BANQUE"];
 const FOURNISSEURS_TELEPHONE = ["MYNITA", "AMANATA"];
+const TAUX_MAJORATION_DEFAUT = 5; // % — utilisé si le paramètre n'existe pas encore en base
 
 function genererReference() {
   return "REC-" + Date.now().toString(36).toUpperCase() + "-" + Math.floor(1000 + Math.random() * 8999);
+}
+
+function estEnRetard(contravention) {
+  return new Date() > new Date(contravention.date_echeance);
+}
+
+/** Taux de majoration de retard courant (%), modifiable depuis l'Administration. */
+async function tauxMajorationRetard() {
+  const valeur = await db.parametres.get("taux_majoration_retard");
+  const taux = valeur !== null ? Number(valeur) : NaN;
+  return Number.isFinite(taux) ? taux : TAUX_MAJORATION_DEFAUT;
+}
+
+/**
+ * Montant réellement dû aujourd'hui pour une contravention : le montant
+ * initial, majoré une seule fois (pas de cumul dans le temps) si l'échéance
+ * est dépassée et que la contravention n'est ni payée, ni contestée, ni
+ * annulée.
+ */
+function calculerMontantDu(contravention, tauxMajorationPourcent) {
+  if (["PAYEE", "CONTESTEE", "ANNULEE"].includes(contravention.statut)) return contravention.montant;
+  if (!estEnRetard(contravention)) return contravention.montant;
+  return Math.round(contravention.montant * (1 + tauxMajorationPourcent / 100));
+}
+
+/** Version pratique de calculerMontantDu qui va lire le taux en base elle-même. */
+async function montantDu(contravention) {
+  return calculerMontantDu(contravention, await tauxMajorationRetard());
 }
 
 /**
@@ -50,13 +77,18 @@ async function payerContravention({ contravention, methode, numero_telephone, ac
     return { ok: false, status: 409, error: "Cette contravention a été annulée et ne peut être payée." };
   }
 
+  // Montant réellement dû : majoré une seule fois si l'échéance est dépassée
+  // (voir calculerMontantDu ci-dessus) — c'est ce montant qui est collecté et
+  // enregistré, pas le montant initial de la contravention.
+  const montantAPayer = await montantDu(contravention);
+
   // Déclenche la demande de collecte auprès du fournisseur (simulée pour
   // l'instant — approuvée instantanément ; en réel, asynchrone via webhook,
   // voir services/paiementClient.js).
   if (FOURNISSEURS_TELEPHONE.includes(methode)) {
     const resultat = await paiementClient.demanderCollecte({
       telephone: numero_telephone,
-      montant: contravention.montant,
+      montant: montantAPayer,
       reference: contravention.numero_unique,
       fournisseur: methode
     });
@@ -69,7 +101,7 @@ async function payerContravention({ contravention, methode, numero_telephone, ac
     id: uuid(),
     contravention_id: contravention.id,
     numero_contravention: contravention.numero_unique,
-    montant: contravention.montant,
+    montant: montantAPayer,
     methode,
     numero_telephone: numero_telephone || null,
     reference: genererReference(),
@@ -87,7 +119,8 @@ async function payerContravention({ contravention, methode, numero_telephone, ac
     action: "PAIEMENT_CONTRAVENTION",
     details: {
       numero_contravention: contravention.numero_unique,
-      montant: contravention.montant,
+      montant_initial: contravention.montant,
+      montant_paye: montantAPayer,
       methode,
       reference: paiement.reference,
       canal: canal || "APP"
@@ -99,7 +132,7 @@ async function payerContravention({ contravention, methode, numero_telephone, ac
     paiement,
     recu: {
       numero_contravention: contravention.numero_unique,
-      montant: contravention.montant,
+      montant: montantAPayer,
       type_infraction: contravention.type_infraction_libelle,
       reference: paiement.reference,
       date: paiement.date_paiement
@@ -107,4 +140,4 @@ async function payerContravention({ contravention, methode, numero_telephone, ac
   };
 }
 
-module.exports = { payerContravention, FOURNISSEURS_VALIDES };
+module.exports = { payerContravention, FOURNISSEURS_VALIDES, montantDu, calculerMontantDu, tauxMajorationRetard };
