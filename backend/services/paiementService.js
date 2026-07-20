@@ -23,7 +23,13 @@ function estEnRetard(contravention) {
   return new Date() > new Date(contravention.date_echeance);
 }
 
-/** Taux de majoration de retard courant (%), modifiable depuis l'Administration. */
+/**
+ * Taux de majoration de retard COURANT (%), modifiable depuis
+ * l'Administration. N'est utilisé que pour figer le taux sur une NOUVELLE
+ * contravention au moment de sa création (voir routes/contraventions.js) —
+ * jamais pour recalculer une contravention déjà émise, sous peine de rendre
+ * un changement de taux rétroactif.
+ */
 async function tauxMajorationRetard() {
   const valeur = await db.parametres.get("taux_majoration_retard");
   const taux = valeur !== null ? Number(valeur) : NaN;
@@ -34,17 +40,21 @@ async function tauxMajorationRetard() {
  * Montant réellement dû aujourd'hui pour une contravention : le montant
  * initial, majoré une seule fois (pas de cumul dans le temps) si l'échéance
  * est dépassée et que la contravention n'est ni payée, ni contestée, ni
- * annulée.
+ * annulée. Utilise le taux FIGÉ sur la contravention elle-même (celui en
+ * vigueur au moment de son émission) — pas le taux courant du paramètre,
+ * qui a pu changer depuis sans effet rétroactif sur cette contravention.
  */
-function calculerMontantDu(contravention, tauxMajorationPourcent) {
+function calculerMontantDu(contravention) {
   if (["PAYEE", "CONTESTEE", "ANNULEE"].includes(contravention.statut)) return contravention.montant;
   if (!estEnRetard(contravention)) return contravention.montant;
-  return Math.round(contravention.montant * (1 + tauxMajorationPourcent / 100));
+  const taux = Number(contravention.taux_majoration_retard);
+  const tauxEffectif = Number.isFinite(taux) ? taux : TAUX_MAJORATION_DEFAUT;
+  return Math.round(contravention.montant * (1 + tauxEffectif / 100));
 }
 
-/** Version pratique de calculerMontantDu qui va lire le taux en base elle-même. */
+/** Alias asynchrone de calculerMontantDu (conservé pour les appelants existants). */
 async function montantDu(contravention) {
-  return calculerMontantDu(contravention, await tauxMajorationRetard());
+  return calculerMontantDu(contravention);
 }
 
 /**

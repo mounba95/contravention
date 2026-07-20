@@ -32,13 +32,12 @@ router.get("/contraventions.csv", authenticate, requireRole("admin"), async (req
   try {
     const { statut, niu, numero, date_debut, date_fin } = req.query;
     const rows = await db.contraventions.searchAll({ statut, niu, numero, dateDebut: date_debut, dateFin: date_fin });
-    const taux = await paiementService.tauxMajorationRetard();
 
     const csv = toCsv(
       ["Numero", "Plaque", "NIU_Usager", "Nom_Usager", "Agent", "Infraction", "Montant_Initial_FCFA", "Montant_Du_FCFA", "Lieu", "Statut", "Date_Emission", "Date_Echeance"],
       rows.map(c => [
         c.numero_unique, c.plaque || "", c.niu_usager, `${c.citoyen_prenom} ${c.citoyen_nom}`, c.agent_nom,
-        c.type_infraction_libelle, c.montant, paiementService.calculerMontantDu(c, taux), c.lieu, statutCalcule(c),
+        c.type_infraction_libelle, c.montant, paiementService.calculerMontantDu(c), c.lieu, statutCalcule(c),
         new Date(c.date_heure).toLocaleString("fr-FR"), new Date(c.date_echeance).toLocaleDateString("fr-FR")
       ])
     );

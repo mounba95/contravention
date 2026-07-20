@@ -90,7 +90,11 @@ CREATE TABLE IF NOT EXISTS contraventions (
   photo_path TEXT,               -- chemin relatif vers le fichier de preuve (uploads/preuves/...)
   date_heure TIMESTAMPTZ NOT NULL,
   date_echeance TIMESTAMPTZ NOT NULL,
-  statut TEXT NOT NULL DEFAULT 'NON_PAYEE' CHECK (statut IN ('NON_PAYEE', 'PAYEE', 'EN_RETARD', 'CONTESTEE', 'ANNULEE'))
+  statut TEXT NOT NULL DEFAULT 'NON_PAYEE' CHECK (statut IN ('NON_PAYEE', 'PAYEE', 'EN_RETARD', 'CONTESTEE', 'ANNULEE')),
+  -- Figé à l'émission (voir migration 011) : le taux en vigueur au moment de
+  -- la contravention, jamais recalculé avec la valeur courante du paramètre
+  -- (une majoration ne doit pas être rétroactive).
+  taux_majoration_retard NUMERIC NOT NULL DEFAULT 5
 );
 CREATE INDEX IF NOT EXISTS idx_contraventions_niu ON contraventions(niu_usager);
 CREATE INDEX IF NOT EXISTS idx_contraventions_agent ON contraventions(agent_id);

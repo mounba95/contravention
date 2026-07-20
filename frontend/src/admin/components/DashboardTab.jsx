@@ -51,23 +51,36 @@ function BarOrEmpty({ dataObj }) {
 export default function DashboardTab() {
   const [stats, setStats] = useState(null);
   const [agents, setAgents] = useState([]);
-  const [filtres, setFiltres] = useState({ dateDebut: "", dateFin: "", agentId: "" });
+  const [zones, setZones] = useState([]);
+  const [typesInfraction, setTypesInfraction] = useState([]);
+  const [filtres, setFiltres] = useState({ dateDebut: "", dateFin: "", agentId: "", statut: "", zone: "", typeInfractionId: "" });
+  // Incrémenté à chaque chargement réussi : sert de `key` aux graphiques pour
+  // forcer leur remontage. Sans ça, Chart.js ne redessine pas toujours le
+  // canevas quand seules les valeurs (et pas la structure) changent.
+  const [chargeId, setChargeId] = useState(0);
 
   const charger = useCallback(async (f = filtres) => {
     const params = new URLSearchParams();
     if (f.dateDebut) params.set("date_debut", f.dateDebut);
     if (f.dateFin) params.set("date_fin", f.dateFin + "T23:59:59");
     if (f.agentId) params.set("agent_id", f.agentId);
+    if (f.statut) params.set("statut", f.statut);
+    if (f.zone) params.set("zone", f.zone);
+    if (f.typeInfractionId) params.set("type_infraction_id", f.typeInfractionId);
     const data = await api(`/api/dashboard/stats?${params.toString()}`, "GET");
     setStats(data);
+    setChargeId(n => n + 1);
+    return data;
   }, [filtres]);
 
   useEffect(() => {
-    charger({ dateDebut: "", dateFin: "", agentId: "" });
+    charger({ dateDebut: "", dateFin: "", agentId: "", statut: "", zone: "", typeInfractionId: "" })
+      .then(data => setZones(Object.keys(data.par_zone).sort((a, b) => a.localeCompare(b))));
     api("/api/users", "GET").then(list => setAgents(list.filter(u => u.role === "agent")));
+    api("/api/contraventions/types-infraction", "GET").then(setTypesInfraction);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const filtresActifs = filtres.dateDebut || filtres.dateFin || filtres.agentId;
+  const filtresActifs = filtres.dateDebut || filtres.dateFin || filtres.agentId || filtres.statut || filtres.zone || filtres.typeInfractionId;
 
   if (!stats) return <div className="empty-state">Chargement…</div>;
 
@@ -79,7 +92,7 @@ export default function DashboardTab() {
     <>
       <div className="chart-card" style={{ marginBottom: 22 }}>
         <h2>🔎 Filtrer les statistiques</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(180px, 1fr))", gap: 12 }}>
           <div>
             <label>Du</label>
             <input type="date" value={filtres.dateDebut} onChange={e => setFiltres({ ...filtres, dateDebut: e.target.value })} />
@@ -95,12 +108,40 @@ export default function DashboardTab() {
               {agents.map(a => <option key={a.id} value={a.id}>{a.nom}</option>)}
             </select>
           </div>
+          <div>
+            <label>Statut</label>
+            <select value={filtres.statut} onChange={e => setFiltres({ ...filtres, statut: e.target.value })}>
+              <option value="">Tous les statuts</option>
+              <option value="NON_PAYEE">Non payée</option>
+              <option value="PAYEE">Payée</option>
+              <option value="EN_RETARD">En retard</option>
+              <option value="CONTESTEE">Contestée</option>
+              <option value="ANNULEE">Annulée</option>
+            </select>
+          </div>
+          <div>
+            <label>Zone</label>
+            <select value={filtres.zone} onChange={e => setFiltres({ ...filtres, zone: e.target.value })}>
+              <option value="">Toutes les zones</option>
+              {zones.map(z => <option key={z} value={z}>{z}</option>)}
+            </select>
+          </div>
+          <div>
+            <label>Type d'infraction</label>
+            <select value={filtres.typeInfractionId} onChange={e => setFiltres({ ...filtres, typeInfractionId: e.target.value })}>
+              <option value="">Toutes les infractions</option>
+              {typesInfraction.map(t => <option key={t.id} value={t.id}>{t.libelle}</option>)}
+            </select>
+          </div>
         </div>
         <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
           <button className="primary" style={{ marginTop: 0 }} onClick={() => charger(filtres)}>Appliquer</button>
           <button
             className="secondary"
-            onClick={() => { const vide = { dateDebut: "", dateFin: "", agentId: "" }; setFiltres(vide); charger(vide); }}
+            onClick={() => {
+              const vide = { dateDebut: "", dateFin: "", agentId: "", statut: "", zone: "", typeInfractionId: "" };
+              setFiltres(vide); charger(vide);
+            }}
           >
             Réinitialiser
           </button>
@@ -119,19 +160,19 @@ export default function DashboardTab() {
       <div className="charts-grid">
         <div className="chart-card">
           <h2>🥯 Répartition par statut</h2>
-          <DonutOrEmpty dataObj={statutData} colors={statutColors} />
+          <DonutOrEmpty key={`statut-${chargeId}`} dataObj={statutData} colors={statutColors} />
         </div>
         <div className="chart-card">
           <h2>🚦 Infractions par type</h2>
-          <DonutOrEmpty dataObj={stats.par_infraction} />
+          <DonutOrEmpty key={`infraction-${chargeId}`} dataObj={stats.par_infraction} />
         </div>
         <div className="chart-card">
           <h2>📍 Contraventions par zone</h2>
-          <BarOrEmpty dataObj={stats.par_zone} />
+          <BarOrEmpty key={`zone-${chargeId}`} dataObj={stats.par_zone} />
         </div>
         <div className="chart-card">
           <h2>👮 Contraventions par agent</h2>
-          <BarOrEmpty dataObj={stats.par_agent} />
+          <BarOrEmpty key={`agent-${chargeId}`} dataObj={stats.par_agent} />
         </div>
       </div>
     </>

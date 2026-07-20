@@ -8,8 +8,10 @@ const router = express.Router();
 // d'émission) et par agent (agent_id) — la recette suit le même périmètre.
 router.get("/stats", authenticate, requireRole("admin"), async (req, res) => {
   try {
-    const { date_debut, date_fin, agent_id } = req.query;
-    const data = await db.dashboardStats.get({ dateDebut: date_debut, dateFin: date_fin, agentId: agent_id });
+    const { date_debut, date_fin, agent_id, statut, zone, type_infraction_id } = req.query;
+    const data = await db.dashboardStats.get({
+      dateDebut: date_debut, dateFin: date_fin, agentId: agent_id, statut, zone, typeInfractionId: type_infraction_id
+    });
 
     const t = data.total;
     const parStatut = {

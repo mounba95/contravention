@@ -180,12 +180,12 @@ const contraventions = {
         `INSERT INTO contraventions
           (id, numero_unique, niu_usager, plaque, citoyen_nom, citoyen_prenom, agent_id, agent_nom,
            type_infraction_id, type_infraction_libelle, montant, lieu, latitude, longitude,
-           notes, photo_path, date_heure, date_echeance, statut)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
+           notes, photo_path, date_heure, date_echeance, statut, taux_majoration_retard)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
         [c.id, c.numero_unique, c.niu_usager, c.plaque || null, c.citoyen_nom, c.citoyen_prenom, c.agent_id, c.agent_nom,
          c.infractions.length === 1 ? c.infractions[0].type_infraction_id : null,
          c.type_infraction_libelle, c.montant, c.lieu, c.latitude, c.longitude,
-         c.notes || "", c.photo_path || null, c.date_heure, c.date_echeance, c.statut]
+         c.notes || "", c.photo_path || null, c.date_heure, c.date_echeance, c.statut, c.taux_majoration_retard]
       );
       for (const inf of c.infractions) {
         await client.query(
@@ -292,19 +292,34 @@ const contraventions = {
 };
 
 /**
- * Statistiques du tableau de bord, filtrables par période et par agent.
- * Les mêmes conditions (sur `c`, alias de `contraventions`) sont réutilisées
- * pour les contraventions, leurs infractions et les paiements associés, afin
- * que la recette affichée corresponde exactement au périmètre filtré.
+ * Statistiques du tableau de bord, filtrables par période, agent, statut,
+ * zone et type d'infraction — un filtre par carte affichée. Les mêmes
+ * conditions (sur `c`, alias de `contraventions`) sont réutilisées pour les
+ * contraventions, leurs infractions et les paiements associés, afin que la
+ * recette affichée corresponde exactement au périmètre filtré.
  */
 const dashboardStats = {
-  async get({ dateDebut, dateFin, agentId } = {}) {
+  async get({ dateDebut, dateFin, agentId, statut, zone, typeInfractionId } = {}) {
     const conditions = [];
     const params = [];
     let i = 1;
     if (agentId) { conditions.push(`c.agent_id = $${i++}`); params.push(agentId); }
     if (dateDebut) { conditions.push(`c.date_heure >= $${i++}`); params.push(dateDebut); }
     if (dateFin) { conditions.push(`c.date_heure <= $${i++}`); params.push(dateFin); }
+    if (zone) { conditions.push(`c.lieu = $${i++}`); params.push(zone); }
+    if (statut === "PAYEE" || statut === "CONTESTEE" || statut === "ANNULEE") {
+      conditions.push(`c.statut = $${i++}`); params.push(statut);
+    } else if (statut === "NON_PAYEE") {
+      conditions.push(`c.statut = 'NON_PAYEE' AND c.date_echeance >= NOW()`);
+    } else if (statut === "EN_RETARD") {
+      conditions.push(`c.statut = 'NON_PAYEE' AND c.date_echeance < NOW()`);
+    }
+    if (typeInfractionId) {
+      conditions.push(
+        `EXISTS (SELECT 1 FROM contravention_infractions ci2 WHERE ci2.contravention_id = c.id AND ci2.type_infraction_id = $${i++})`
+      );
+      params.push(typeInfractionId);
+    }
     const whereC = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
     const { rows: totalRows } = await pool.query(

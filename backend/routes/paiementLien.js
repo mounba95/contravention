@@ -53,8 +53,10 @@ router.get("/:token", async (req, res) => {
       type_infraction_libelle: c.type_infraction_libelle,
       infractions: c.infractions,
       montant: c.montant,
-      montant_du: await paiementService.montantDu(c),
-      taux_majoration_retard: await paiementService.tauxMajorationRetard(),
+      montant_du: paiementService.calculerMontantDu(c),
+      // Taux figé à l'émission de CETTE contravention — pas le taux courant
+      // du paramètre, qui a pu changer depuis sans effet rétroactif.
+      taux_majoration_retard: Number(c.taux_majoration_retard),
       lieu: c.lieu,
       date_heure: c.date_heure,
       date_echeance: c.date_echeance,
