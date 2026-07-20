@@ -83,6 +83,9 @@ app.use("/api/p", paiementLienRoutes);
 
 app.get("/api/health", (req, res) => res.json({ status: "ok", horodatage: new Date().toISOString() }));
 
+// La racine va directement à la connexion Administration (pas de page d'accueil séparée).
+app.get("/", (req, res) => res.redirect("/admin.html"));
+
 // Sert les interfaces web statiques (Agent, Admin, page de paiement/contestation par lien SMS)
 app.use(express.static(path.join(__dirname, "public")));
 

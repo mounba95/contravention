@@ -80,13 +80,14 @@ export default function ContraventionsTab() {
         <>
           <table>
             <thead>
-              <tr><th>N°</th><th>Usager</th><th>Agent</th><th>Infraction</th><th>Lieu</th><th>Montant</th><th>Statut</th><th>Date</th><th>Preuve</th></tr>
+              <tr><th>N°</th><th>Usager</th><th>Plaque</th><th>Agent</th><th>Infraction</th><th>Lieu</th><th>Montant</th><th>Statut</th><th>Date</th><th>Preuve</th></tr>
             </thead>
             <tbody>
               {donnees.rows.map(c => (
                 <tr key={c.id}>
                   <td>{c.numero_unique}</td>
                   <td>{c.citoyen_prenom} {c.citoyen_nom}</td>
+                  <td>{c.plaque || "—"}</td>
                   <td>{c.agent_nom}</td>
                   <td>{c.type_infraction_libelle}</td>
                   <td>{c.lieu}</td>

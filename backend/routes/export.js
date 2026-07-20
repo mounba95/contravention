@@ -33,9 +33,9 @@ router.get("/contraventions.csv", authenticate, requireRole("admin"), async (req
     const rows = await db.contraventions.searchAll({ statut, niu, numero, dateDebut: date_debut, dateFin: date_fin });
 
     const csv = toCsv(
-      ["Numero", "NIU_Usager", "Nom_Usager", "Agent", "Infraction", "Montant_FCFA", "Lieu", "Statut", "Date_Emission", "Date_Echeance"],
+      ["Numero", "Plaque", "NIU_Usager", "Nom_Usager", "Agent", "Infraction", "Montant_FCFA", "Lieu", "Statut", "Date_Emission", "Date_Echeance"],
       rows.map(c => [
-        c.numero_unique, c.niu_usager, `${c.citoyen_prenom} ${c.citoyen_nom}`, c.agent_nom,
+        c.numero_unique, c.plaque || "", c.niu_usager, `${c.citoyen_prenom} ${c.citoyen_nom}`, c.agent_nom,
         c.type_infraction_libelle, c.montant, c.lieu, statutCalcule(c),
         new Date(c.date_heure).toLocaleString("fr-FR"), new Date(c.date_echeance).toLocaleDateString("fr-FR")
       ])

@@ -12,7 +12,6 @@ export default defineConfig({
     emptyOutDir: true, // backend/public est désormais entièrement généré par ce build
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'index.html'),
         agent: resolve(__dirname, 'agent.html'),
         admin: resolve(__dirname, 'admin.html'),
         payer: resolve(__dirname, 'payer.html')

@@ -3,10 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Administration — Système National des Contraventions</title>
+    <title>Système National des Contraventions</title>
+    <meta http-equiv="refresh" content="0; url=/admin.html" />
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/admin/main.jsx"></script>
+    <!-- Utilisée uniquement par `npm run dev` (serveur Vite local) : en
+         production, c'est le backend (server.js) qui redirige "/" vers
+         /admin.html avant même d'atteindre ce fichier — non inclus dans le
+         build (voir vite.config.js). -->
+    <p>Redirection vers <a href="/admin.html">/admin.html</a>…</p>
   </body>
 </html>

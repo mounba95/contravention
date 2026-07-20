@@ -21,13 +21,14 @@ export default function HistoriqueTab({ refreshKey }) {
       {!erreur && liste && liste.length > 0 && (
         <table>
           <thead>
-            <tr><th>N°</th><th>Usager</th><th>Infraction</th><th>Montant</th><th>Statut</th><th>Date</th></tr>
+            <tr><th>N°</th><th>Usager</th><th>Plaque</th><th>Infraction</th><th>Montant</th><th>Statut</th><th>Date</th></tr>
           </thead>
           <tbody>
             {liste.map(c => (
               <tr key={c.id}>
                 <td>{c.numero_unique}</td>
                 <td>{c.citoyen_prenom} {c.citoyen_nom}</td>
+                <td>{c.plaque || "—"}</td>
                 <td>{c.type_infraction_libelle}</td>
                 <td>{c.montant.toLocaleString("fr-FR")} FCFA</td>
                 <td><StatusPill statut={c.statut} /></td>

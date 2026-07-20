@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView,
-  Image, ActivityIndicator, Alert
+  Image, ActivityIndicator, Alert, Linking
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
@@ -258,6 +258,16 @@ export default function CreateContraventionScreen({ enLigne, onCreated }) {
           ))}
           <TicketRow k="Lieu" v={ticket.lieu} />
           <Text style={styles.ticketMontant}>Total : {ticket.montant.toLocaleString("fr-FR")} FCFA</Text>
+          {ticket.lien_paiement_demo && (
+            <TouchableOpacity onPress={() => Linking.openURL(ticket.lien_paiement_demo)} style={{ marginTop: 12 }}>
+              <Text style={{ fontSize: 11, fontWeight: "700", textTransform: "uppercase", color: colors.inkSoft, marginBottom: 4 }}>
+                Lien de paiement (démo — normalement envoyé par SMS)
+              </Text>
+              <Text style={{ color: colors.primary, fontSize: 12.5, textDecorationLine: "underline" }}>
+                {ticket.lien_paiement_demo}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </ScrollView>

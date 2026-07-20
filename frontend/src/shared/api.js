@@ -1,17 +1,29 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 
+// Clé de session propre à chaque interface (agent / admin), fixée une fois
+// au démarrage via setNamespace() dans main.jsx de chaque appli. Sans ça,
+// agent.html et admin.html partageraient la même session dans le
+// navigateur : se connecter sur l'une écraserait la session de l'autre
+// (symptôme : "Accès refusé pour ce rôle." après avoir ouvert l'autre
+// interface dans un autre onglet).
+let NAMESPACE = "session";
+
+export function setNamespace(ns) {
+  NAMESPACE = `session_${ns}`;
+}
+
 export function getSession() {
-  const raw = localStorage.getItem("session");
+  const raw = localStorage.getItem(NAMESPACE);
   if (!raw) return null;
   try { return JSON.parse(raw); } catch { return null; }
 }
 
 export function saveSession(data) {
-  localStorage.setItem("session", JSON.stringify(data));
+  localStorage.setItem(NAMESPACE, JSON.stringify(data));
 }
 
 export function clearSession() {
-  localStorage.removeItem("session");
+  localStorage.removeItem(NAMESPACE);
 }
 
 export async function api(path, method = "GET", body = null, auth = true) {

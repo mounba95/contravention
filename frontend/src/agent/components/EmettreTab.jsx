@@ -28,6 +28,9 @@ export default function EmettreTab({ onCreated }) {
   const [notes, setNotes] = useState("");
   const [photoBase64, setPhotoBase64] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
+  const [position, setPosition] = useState(null);
+  const [chargementPosition, setChargementPosition] = useState(false);
+  const [messagePosition, setMessagePosition] = useState(null);
 
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
   const [messageCreation, setMessageCreation] = useState(null);
@@ -97,6 +100,25 @@ export default function EmettreTab({ onCreated }) {
     }
   }
 
+  function capturerPosition() {
+    setMessagePosition(null);
+    if (!navigator.geolocation) {
+      setMessagePosition({ texte: "La géolocalisation n'est pas disponible sur ce navigateur.", ok: false });
+      return;
+    }
+    setChargementPosition(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setPosition({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+        setChargementPosition(false);
+      },
+      () => {
+        setMessagePosition({ texte: "Impossible de récupérer la position. Vérifiez que la localisation est autorisée pour ce site.", ok: false });
+        setChargementPosition(false);
+      }
+    );
+  }
+
   function surChangementPhoto(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -117,6 +139,8 @@ export default function EmettreTab({ onCreated }) {
     setNotes("");
     setPhotoBase64(null);
     setPhotoPreview(null);
+    setPosition(null);
+    setMessagePosition(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
@@ -141,6 +165,8 @@ export default function EmettreTab({ onCreated }) {
       type_infraction_ids: typesSelectionnes,
       lieu: lieu.trim(),
       notes: notes.trim(),
+      latitude: position ? position.latitude : null,
+      longitude: position ? position.longitude : null,
       photo_preuve: photoBase64
     };
 
@@ -214,6 +240,11 @@ export default function EmettreTab({ onCreated }) {
             <label>Lieu</label>
             <input value={lieu} onChange={e => setLieu(e.target.value)} placeholder="Ex : Avenue de la Liberté, Niamey" />
 
+            <button type="button" className="secondary" style={{ marginTop: 10 }} onClick={capturerPosition} disabled={chargementPosition}>
+              {chargementPosition ? "Localisation…" : position ? `✓ Position enregistrée (${position.latitude.toFixed(4)}, ${position.longitude.toFixed(4)})` : "📍 Joindre ma position GPS"}
+            </button>
+            <Message texte={messagePosition?.texte} ok={messagePosition?.ok} />
+
             <label>Notes complémentaires (optionnel)</label>
             <textarea value={notes} onChange={e => setNotes(e.target.value)} />
 
@@ -246,6 +277,22 @@ export default function EmettreTab({ onCreated }) {
             </div>
             {qrCode && <img src={qrCode} alt="QR code" style={{ width: 110, height: 110 }} />}
           </div>
+          {ticket.lien_paiement_demo && (
+            <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
+              <span className="k">Lien de paiement (démo — hors production, normalement envoyé par SMS)</span>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
+                <a href={ticket.lien_paiement_demo} target="_blank" rel="noreferrer">{ticket.lien_paiement_demo}</a>
+                <button
+                  type="button"
+                  className="secondary"
+                  style={{ marginTop: 0, padding: "4px 10px", fontSize: 12 }}
+                  onClick={() => navigator.clipboard.writeText(ticket.lien_paiement_demo)}
+                >
+                  Copier
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </>
