@@ -12,10 +12,34 @@ export function setNamespace(ns) {
   NAMESPACE = `session_${ns}`;
 }
 
+/** Lit l'horodatage d'expiration (ms) d'un JWT sans vérifier sa signature —
+ *  seul le backend fait foi pour la sécurité, ceci ne sert qu'à décider si
+ *  l'interface doit renvoyer directement vers l'écran de connexion. */
+function expirationToken(token) {
+  try {
+    const payload = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    const decoded = JSON.parse(atob(payload + "=".repeat((4 - payload.length % 4) % 4)));
+    return typeof decoded.exp === "number" ? decoded.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
 export function getSession() {
   const raw = localStorage.getItem(NAMESPACE);
   if (!raw) return null;
-  try { return JSON.parse(raw); } catch { return null; }
+  let session;
+  try { session = JSON.parse(raw); } catch { return null; }
+
+  // Session expirée (12h d'inactivité) : on la purge et on se comporte comme
+  // si l'utilisateur n'était jamais connecté, plutôt que de laisser
+  // l'interface affichée jusqu'au premier appel API qui échouerait.
+  const expiration = session?.token ? expirationToken(session.token) : null;
+  if (expiration !== null && expiration <= Date.now()) {
+    localStorage.removeItem(NAMESPACE);
+    return null;
+  }
+  return session;
 }
 
 export function saveSession(data) {

@@ -10,9 +10,7 @@ import Message from "../shared/components/Message";
 
 const FOURNISSEURS = [
   { valeur: "MYNITA", libelle: "MyNita" },
-  { valeur: "AMANATA", libelle: "AmanaTa" },
-  { valeur: "WALLET", libelle: "Wallet national" },
-  { valeur: "BANQUE", libelle: "Virement bancaire" }
+  { valeur: "AMANATA", libelle: "AmanaTa" }
 ];
 
 function getToken() {

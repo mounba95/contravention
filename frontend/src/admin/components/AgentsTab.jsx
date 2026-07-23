@@ -130,7 +130,15 @@ export default function AgentsTab() {
                 <td>{u.station || "—"}</td>
                 <td><span className={`stamp ${u.actif ? "PAYEE" : "ANNULEE"}`}>{u.actif ? "Actif" : "Désactivé"}</span></td>
                 <td style={{ display: "flex", gap: 8 }}>
-                  <button className="secondary" onClick={() => basculerActif(u)}>{u.actif ? "Désactiver" : "Réactiver"}</button>
+                  <button
+                    className="secondary"
+                    style={u.actif
+                      ? { color: "var(--danger)", background: "var(--danger-soft)" }
+                      : { color: "var(--success)", background: "var(--success-soft)" }}
+                    onClick={() => basculerActif(u)}
+                  >
+                    {u.actif ? "Désactiver" : "Réactiver"}
+                  </button>
                   <button className="secondary" onClick={() => reinitialiserMotDePasse(u)}>Mot de passe</button>
                 </td>
               </tr>

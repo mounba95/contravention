@@ -92,7 +92,7 @@ export default function DashboardTab() {
     <>
       <div className="chart-card" style={{ marginBottom: 22 }}>
         <h2>🔎 Filtrer les statistiques</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(180px, 1fr))", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 10 }}>
           <div>
             <label>Du</label>
             <input type="date" value={filtres.dateDebut} onChange={e => setFiltres({ ...filtres, dateDebut: e.target.value })} />

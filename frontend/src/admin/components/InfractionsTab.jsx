@@ -146,7 +146,15 @@ export default function InfractionsTab() {
                 <td><span className={`stamp ${t.actif ? "PAYEE" : "ANNULEE"}`}>{t.actif ? "Actif" : "Désactivé"}</span></td>
                 <td style={{ display: "flex", gap: 8 }}>
                   <button className="secondary" onClick={() => ouvrirEdition(t)}>Modifier</button>
-                  <button className="secondary" onClick={() => basculerActif(t)}>{t.actif ? "Désactiver" : "Réactiver"}</button>
+                  <button
+                    className="secondary"
+                    style={t.actif
+                      ? { color: "var(--danger)", background: "var(--danger-soft)" }
+                      : { color: "var(--success)", background: "var(--success-soft)" }}
+                    onClick={() => basculerActif(t)}
+                  >
+                    {t.actif ? "Désactiver" : "Réactiver"}
+                  </button>
                 </td>
               </tr>
             ))}

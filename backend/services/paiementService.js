@@ -11,7 +11,9 @@ const paiementClient = require("./paiementClient");
 const { logAction } = require("../middleware/audit");
 const { isValidTelephone } = require("../middleware/validators");
 
-const FOURNISSEURS_VALIDES = ["MYNITA", "AMANATA", "WALLET", "BANQUE"];
+// Wallet national et virement bancaire retirés : seuls MyNita et AmanaTa
+// sont proposés au paiement (voir frontend/src/payer/App.jsx).
+const FOURNISSEURS_VALIDES = ["MYNITA", "AMANATA"];
 const FOURNISSEURS_TELEPHONE = ["MYNITA", "AMANATA"];
 const TAUX_MAJORATION_DEFAUT = 5; // % — utilisé si le paramètre n'existe pas encore en base
 
